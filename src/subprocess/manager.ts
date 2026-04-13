@@ -193,7 +193,15 @@ export class ClaudeSubprocess extends EventEmitter {
   private buildArgs(options: SubprocessOptions): string[] {
     const args = [
       "--print", // Non-interactive mode
-      "--dangerously-skip-permissions", // Skip permission prompts
+    ];
+
+    // Claude CLI rejects --dangerously-skip-permissions when running as root.
+    // This proxy commonly runs on VPSes as root, so only add the flag for non-root users.
+    if (typeof process.getuid !== "function" || process.getuid() !== 0) {
+      args.push("--dangerously-skip-permissions"); // Skip permission prompts
+    }
+
+    args.push(
       "--output-format",
       "stream-json", // JSON streaming output
       "--verbose", // Required for stream-json
@@ -204,7 +212,7 @@ export class ClaudeSubprocess extends EventEmitter {
       "--append-system-prompt",
       OPENCLAW_TOOL_MAPPING_PROMPT,
       // Prompt is passed via stdin (avoids E2BIG on large inputs)
-    ];
+    );
 
     if (options.sessionId) {
       args.push("--session-id", options.sessionId);
